@@ -8,6 +8,7 @@ using System;
 using Microsoft.Extensions.Logging;
 using Duende.IdentityServer.Internal;
 using Duende.IdentityServer.Configuration;
+using System.Collections.Generic;
 
 namespace Duende.IdentityServer.Services;
 
@@ -74,6 +75,29 @@ public class DefaultCache<T> : ICache<T>
         key = GetKey(key);
         var item = Cache.Get<T>(key);
         return Task.FromResult(item);
+    }
+
+    public async Task<Dictionary<string, T>> GetAsync(List<string> keys)
+    {
+        using var activity = Tracing.CacheActivitySource.StartActivity("DefaultCache.Get");
+
+        var tasks = new List<Task>();
+        var items = new Dictionary<string, T>();
+
+        foreach (var key in keys)
+        {
+            tasks.Add(Task.Run(async () =>
+            {
+                var cacheKey = GetKey(key);
+                var item = Cache.Get<T>(cacheKey);
+                items.Add(key, item);
+            }));
+        }
+
+        // await all
+        await Task.WhenAll(tasks);
+
+        return items;
     }
 
     /// <inheritdoc/>

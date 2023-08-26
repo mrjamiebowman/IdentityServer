@@ -5,6 +5,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Duende.IdentityServer.Services;
@@ -22,6 +23,8 @@ public interface ICache<T>
     /// <param name="key">The key.</param>
     /// <returns>The cached item, or <c>null</c> if no item matches the key.</returns>
     Task<T?> GetAsync(string key);
+
+    Task<Dictionary<string, T>> GetAsync(List<string> keys);
 
     /// <summary>
     /// Gets the cached data based upon a key index.

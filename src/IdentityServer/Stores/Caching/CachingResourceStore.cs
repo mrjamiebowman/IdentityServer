@@ -98,23 +98,22 @@ public class CachingResourceStore<T> : IResourceStore
     {
         using var activity = Tracing.StoreActivitySource.StartActivity("CachingResourceStore.FindApiResourcesByScopeName");
         activity?.SetTag(Tracing.Properties.ScopeNames, scopeNames.ToSpaceSeparatedString());
-            
+
         var apiResourceNames = new HashSet<string>();
-        var uncachedScopes = new List<string>();
-        foreach (var scope in scopeNames)
+        var uncachedScopes = scopeNames.ToList();
+
+        // NOTE: this returns 10 Redis keys/values in one call as opposed to 10...
+        var items = await _apiResourceNames.GetAsync(scopeNames.ToList());
+
+        // cached items
+        foreach (KeyValuePair<string, ApiResourceNames> item in items)
         {
-            var apiResourceName = await _apiResourceNames.GetAsync(scope);
-            if (apiResourceName != null)
+            foreach (var name in item.Value.Names)
             {
-                foreach(var name in apiResourceName.Names)
-                {
-                    apiResourceNames.Add(name);
-                }
+                apiResourceNames.Add(name);
             }
-            else
-            {
-                uncachedScopes.Add(scope);
-            }
+
+            uncachedScopes.Remove(item.Key);
         }
 
         if (uncachedScopes.Any())
