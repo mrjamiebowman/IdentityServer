@@ -102,7 +102,12 @@ public class CachingResourceStore<T> : IResourceStore
         var apiResourceNames = new HashSet<string>();
         var uncachedScopes = scopeNames.ToList();
 
+        /***************************************/
+        /*          mrjb: caching code         */
+        /***************************************/
+
         // NOTE: this returns 10 Redis keys/values in one call as opposed to 10...
+        // this is modified code
         var items = await _apiResourceNames.GetAsync(scopeNames.ToList());
 
         // cached items
@@ -209,9 +214,21 @@ public class CachingResourceStore<T> : IResourceStore
     {
         var uncachedNames = new List<string>();
         var cachedItems = new List<TItem>();
+
+        /***************************************/
+        /*          mrjb: caching code         */
+        /***************************************/
+
+        //// NOTE: this returns 10 Redis keys/values in one call as opposed to 10...
+        //// this is modified code
+
+        // get redis / keydb keys
+        var items = await cache.GetAsync(names.ToList());
+        
         foreach (var name in names)
         {
-            var item = await cache.GetAsync(name);
+            var item = items.SingleOrDefault(x => x.Key == name).Value ?? null;
+
             if (item != null)
             {
                 cachedItems.Add(item);
@@ -221,6 +238,19 @@ public class CachingResourceStore<T> : IResourceStore
                 uncachedNames.Add(name);
             }
         }
+
+        //foreach (var name in names)
+        //{
+        //    var item = await cache.GetAsync(name);
+        //    if (item != null)
+        //    {
+        //        cachedItems.Add(item);
+        //    }
+        //    else
+        //    {
+        //        uncachedNames.Add(name);
+        //    }
+        //}
 
         if (uncachedNames.Any())
         {
